@@ -52,13 +52,9 @@
                       <td class="p-4 text-gray-800 font-medium">{{ $item->idras_hewan }}</td>
                       <td class="p-4 text-gray-800">{{ $item->nama_ras }}</td>
                       <td class="p-4">
-                          @if($item->jenisHewan)
-                              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  {{ $item->jenisHewan->nama_jenis_hewan }}
-                              </span>
-                          @else
-                              <span class="text-gray-400">-</span>
-                          @endif
+                          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {{ $item->nama_jenis_hewan ?? '-' }}
+                          </span>
                       </td>
                       <td class="p-4">
                           <div class="flex gap-2">

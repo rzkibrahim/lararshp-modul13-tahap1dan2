@@ -55,7 +55,7 @@
                       <td class="p-4 text-gray-800">{{ $item->nama_role }}</td>
                       <td class="p-4">
                           <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                              {{ $item->users->count() }} user
+                              {{ $item->jumlah_user ?? 0 }} user
                           </span>
                       </td>
                       <td class="p-4">
@@ -64,7 +64,8 @@
                                  class="px-3 py-1 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition duration-200">
                                   <i class="fas fa-edit mr-1"></i>Edit
                               </a>
-                              @if($item->users->count() == 0)
+
+                              @if(($item->jumlah_user ?? 0) == 0)
                                   <form action="{{ route('admin.role.destroy', $item->idrole) }}" 
                                         method="POST" 
                                         onsubmit="return confirm('Apakah Anda yakin ingin menghapus role ini?')">

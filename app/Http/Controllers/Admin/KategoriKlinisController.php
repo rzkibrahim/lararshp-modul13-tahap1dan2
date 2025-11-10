@@ -4,13 +4,24 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\KategoriKlinis;
+use Illuminate\Support\Facades\DB;
 
 class KategoriKlinisController extends Controller
 {
     public function index()
     {
-        $kategoriKlinis = KategoriKlinis::with('kategori')->get();
+        // Ambil semua data kategori klinis + jumlah tindakan
+        $kategoriKlinis = DB::table('kategori_klinis')
+            ->leftJoin('kode_tindakan_terapi', 'kategori_klinis.idkategori_klinis', '=', 'kode_tindakan_terapi.idkategori_klinis')
+            ->select(
+                'kategori_klinis.idkategori_klinis',
+                'kategori_klinis.nama_kategori_klinis',
+                DB::raw('COUNT(kode_tindakan_terapi.idkategori_klinis) AS jumlah_tindakan')
+            )
+            ->groupBy('kategori_klinis.idkategori_klinis', 'kategori_klinis.nama_kategori_klinis')
+            ->orderBy('kategori_klinis.idkategori_klinis', 'asc')
+            ->get();
+
         return view('rshp.admin.DataMaster.kategori-klinis.index', compact('kategoriKlinis'));
     }
 
@@ -22,15 +33,15 @@ class KategoriKlinisController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_kategori_klinis' => 'required|string|max:50|unique:kategori_klinis,nama_kategori_klinis'
+            'nama_kategori_klinis' => 'required|string|max:50|unique:kategori_klinis,nama_kategori_klinis',
         ], [
             'nama_kategori_klinis.required' => 'Nama kategori klinis wajib diisi',
             'nama_kategori_klinis.unique' => 'Nama kategori klinis sudah ada',
-            'nama_kategori_klinis.max' => 'Nama kategori klinis maksimal 50 karakter'
+            'nama_kategori_klinis.max' => 'Nama kategori klinis maksimal 50 karakter',
         ]);
 
-        KategoriKlinis::create([
-            'nama_kategori_klinis' => $request->nama_kategori_klinis
+        DB::table('kategori_klinis')->insert([
+            'nama_kategori_klinis' => trim(ucwords(strtolower($request->nama_kategori_klinis))),
         ]);
 
         return redirect()->route('admin.kategori-klinis.index')
@@ -39,25 +50,39 @@ class KategoriKlinisController extends Controller
 
     public function edit($id)
     {
-        $kategoriKlinis = KategoriKlinis::findOrFail($id);
+        $kategoriKlinis = DB::table('kategori_klinis')
+            ->where('idkategori_klinis', $id)
+            ->first();
+
+        if (!$kategoriKlinis) {
+            abort(404, 'Data kategori klinis tidak ditemukan.');
+        }
+
         return view('rshp.admin.DataMaster.kategori-klinis.edit', compact('kategoriKlinis'));
     }
 
     public function update(Request $request, $id)
     {
-        $kategoriKlinis = KategoriKlinis::findOrFail($id);
-
         $request->validate([
-            'nama_kategori_klinis' => 'required|string|max:50|unique:kategori_klinis,nama_kategori_klinis,' . $id . ',idkategori_klinis'
+            'nama_kategori_klinis' => 'required|string|max:50|unique:kategori_klinis,nama_kategori_klinis,' . $id . ',idkategori_klinis',
         ], [
             'nama_kategori_klinis.required' => 'Nama kategori klinis wajib diisi',
             'nama_kategori_klinis.unique' => 'Nama kategori klinis sudah ada',
-            'nama_kategori_klinis.max' => 'Nama kategori klinis maksimal 50 karakter'
+            'nama_kategori_klinis.max' => 'Nama kategori klinis maksimal 50 karakter',
         ]);
 
-        $kategoriKlinis->update([
-            'nama_kategori_klinis' => $request->nama_kategori_klinis
-        ]);
+        $kategoriKlinis = DB::table('kategori_klinis')->where('idkategori_klinis', $id)->first();
+
+        if (!$kategoriKlinis) {
+            return redirect()->route('admin.kategori-klinis.index')
+                ->with('error', 'Kategori Klinis tidak ditemukan.');
+        }
+
+        DB::table('kategori_klinis')
+            ->where('idkategori_klinis', $id)
+            ->update([
+                'nama_kategori_klinis' => trim(ucwords(strtolower($request->nama_kategori_klinis))),
+            ]);
 
         return redirect()->route('admin.kategori-klinis.index')
             ->with('success', 'Kategori Klinis berhasil diupdate');
@@ -65,16 +90,19 @@ class KategoriKlinisController extends Controller
 
     public function destroy($id)
     {
-        $kategoriKlinis = KategoriKlinis::findOrFail($id);
-        
-        if ($kategoriKlinis->kodeTindakanTerapi()->count() > 0) {
+        // Cek apakah masih digunakan di tabel kode_tindakan_terapi
+        $digunakan = DB::table('kode_tindakan_terapi')
+            ->where('idkategori_klinis', $id)
+            ->count();
+
+        if ($digunakan > 0) {
             return redirect()->route('admin.kategori-klinis.index')
-                ->with('error', 'Kategori Klinis tidak dapat dihapus karena masih digunakan');
+                ->with('error', 'Kategori Klinis tidak dapat dihapus karena masih digunakan.');
         }
 
-        $kategoriKlinis->delete();
+        DB::table('kategori_klinis')->where('idkategori_klinis', $id)->delete();
 
         return redirect()->route('admin.kategori-klinis.index')
-            ->with('success', 'Kategori Klinis berhasil dihapus');
+            ->with('success', 'Kategori Klinis berhasil dihapus.');
     }
 }

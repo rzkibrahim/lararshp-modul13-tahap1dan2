@@ -56,7 +56,7 @@
               <i class="fas fa-arrow-left mr-2"></i> Kembali
           </a>
           <button type="submit" 
-                  class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg flex items-center shadow-md transition duration-200">
+                  class="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg flex items-center shadow-md transition duration-200">
               <i class="fas fa-save mr-2"></i> Simpan
           </button>
       </div>

@@ -3,16 +3,28 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\JenisHewan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class JenisHewanController extends Controller
 {
     public function index()
     {
-        $jenisHewan = JenisHewan::orderBy('idjenis_hewan', 'asc')->get();
+        // Ambil data jenis hewan + hitung jumlah ras
+        $jenisHewan = DB::table('jenis_hewan')
+            ->leftJoin('ras_hewan', 'jenis_hewan.idjenis_hewan', '=', 'ras_hewan.idjenis_hewan')
+            ->select(
+                'jenis_hewan.idjenis_hewan',
+                'jenis_hewan.nama_jenis_hewan',
+                DB::raw('COUNT(ras_hewan.idras_hewan) as jumlah_ras')
+            )
+            ->groupBy('jenis_hewan.idjenis_hewan', 'jenis_hewan.nama_jenis_hewan')
+            ->orderBy('jenis_hewan.idjenis_hewan', 'asc')
+            ->get();
+
         return view('rshp.admin.DataMaster.jenis-hewan.index', compact('jenisHewan'));
     }
+
 
     public function create()
     {
@@ -23,7 +35,7 @@ class JenisHewanController extends Controller
     {
         $validateData = $this->validateJenisHewan($request);
 
-        $jenisHewan = $this->createJenisHewan($validateData);
+        $this->createJenisHewan($validateData);
 
         return redirect()->route('admin.jenis-hewan.index')
             ->with('success', 'Jenis hewan berhasil ditambahkan.');
@@ -31,20 +43,24 @@ class JenisHewanController extends Controller
 
     public function edit($id)
     {
-        $jenisHewan = JenisHewan::findOrFail($id);
+        $jenisHewan = DB::table('jenis_hewan')->where('idjenis_hewan', $id)->first();
+
+        if (!$jenisHewan) {
+            abort(404, 'Data tidak ditemukan.');
+        }
+
         return view('rshp.admin.DataMaster.jenis-hewan.edit', compact('jenisHewan'));
     }
 
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'nama_jenis_hewan' => 'required|string|max:100',
-        ]);
+        $this->validateJenisHewan($request, $id);
 
-        $jenisHewan = JenisHewan::findOrFail($id);
-        $jenisHewan->update([
-            'nama_jenis_hewan' => $request->nama_jenis_hewan,
-        ]);
+        DB::table('jenis_hewan')
+            ->where('idjenis_hewan', $id)
+            ->update([
+                'nama_jenis_hewan' => $this->formatJenisHewanName($request->nama_jenis_hewan),
+            ]);
 
         return redirect()->route('admin.jenis-hewan.index')
             ->with('success', 'Jenis hewan berhasil diupdate.');
@@ -52,13 +68,13 @@ class JenisHewanController extends Controller
 
     public function destroy($id)
     {
-        $jenisHewan = JenisHewan::findOrFail($id);
-        $jenisHewan->delete();
+        DB::table('jenis_hewan')->where('idjenis_hewan', $id)->delete();
 
         return redirect()->route('admin.jenis-hewan.index')
             ->with('success', 'Jenis hewan berhasil dihapus.');
     }
 
+    // 🔹 Validasi input data
     public function validateJenisHewan(Request $request, $id = null)
     {
         $uniqueRule = $id
@@ -72,24 +88,24 @@ class JenisHewanController extends Controller
             'nama_jenis_hewan.unique' => 'Nama jenis hewan sudah ada.',
             'nama_jenis_hewan.max' => 'Nama jenis hewan maksimal 255 karakter.',
             'nama_jenis_hewan.min' => 'Nama jenis hewan minimal 3 karakter.',
-            'nama_jenis_hewan.string' => 'Nama jenis hewan sudah ada',
+            'nama_jenis_hewan.string' => 'Nama jenis hewan harus berupa teks.',
         ]);
     }
 
+    // 🔹 Tambah data ke tabel jenis_hewan
     public function createJenisHewan(array $data)
     {
         try {
-            return JenisHewan::create([
-                'nama_jenis_hewan' => trim(ucwords(strtolower($data['nama_jenis_hewan']))),
+            return DB::table('jenis_hewan')->insert([
+                'nama_jenis_hewan' => $this->formatJenisHewanName($data['nama_jenis_hewan']),
             ]);
         } catch (\Exception $e) {
-            // Log the error message
             \Log::error('Error creating Jenis Hewan: ' . $e->getMessage());
-            // Optionally, you can throw a custom exception or return null
-            throw new \Exception('Failed to create Jenis Hewan.');
+            throw new \Exception('Gagal menambahkan jenis hewan.');
         }
     }
 
+    // 🔹 Format nama (ucwords + trim)
     public function formatJenisHewanName($name)
     {
         return trim(ucwords(strtolower($name)));

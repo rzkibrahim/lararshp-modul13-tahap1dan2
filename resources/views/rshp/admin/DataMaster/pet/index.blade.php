@@ -51,68 +51,69 @@
                 </thead>
                 <tbody>
                     @forelse ($pets as $index => $pet)
-                    <tr class="border-b border-gray-200 hover:bg-blue-50 transition duration-150">
-                        <td class="p-4 text-gray-600">{{ $index + 1 }}</td>
-                        <td class="p-4 text-gray-800 font-medium">{{ $pet->idpet }}</td>
-                        <td class="p-4 text-gray-800">
-                            <div class="font-medium">{{ $pet->nama ?? '-' }}</div>
-                            <div class="text-sm text-gray-500">{{ $pet->warna_tanda ?? '-' }}</div>
-                        </td>
-                        <td class="p-4">
-                            @if($pet->jenis_kelamin == 'M')
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                ♂ Jantan
-                            </span>
-                            @elseif($pet->jenis_kelamin == 'F')
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
-                                ♀ Betina
-                            </span>
-                            @else
-                            <span class="text-gray-400">-</span>
-                            @endif
-                        </td>
-                        <td class="p-4 text-gray-800">
-                            {{ $pet->tanggal_lahir ? \Carbon\Carbon::parse($pet->tanggal_lahir)->format('d M Y') : '-' }}
-                        </td>
-                        <td class="p-4 text-gray-800">
-                            {{ $pet->rasHewan->jenisHewan->nama_jenis_hewan ?? '-' }}
-                        </td>
-                        <td class="p-4 text-gray-800">
-                            {{ $pet->rasHewan->nama_ras ?? '-' }}
-                        </td>
-                        <td class="p-4 text-gray-800">
-                            {{ $pet->pemilik->user->nama ?? '-' }}
-                        </td>
-                        <td class="p-4">
-                            <div class="flex gap-2">
-                                <a href="{{ route('admin.pet.edit', $pet->idpet) }}" 
-                                   class="px-3 py-1 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition duration-200">
-                                    <i class="fas fa-edit mr-1"></i>Edit
-                                </a>
-                                <form action="{{ route('admin.pet.destroy', $pet->idpet) }}" 
-                                      method="POST" 
-                                      onsubmit="return confirm('Apakah Anda yakin ingin menghapus pet ini?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" 
-                                            class="px-3 py-1 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 transition duration-200">
-                                        <i class="fas fa-trash mr-1"></i>Hapus
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
+                        <tr class="border-b border-gray-200 hover:bg-blue-50 transition duration-150">
+                            <td class="p-4 text-gray-600">{{ $index + 1 }}</td>
+                            <td class="p-4 text-gray-800 font-medium">{{ $pet->idpet }}</td>
+                            <td class="p-4 text-gray-800">
+                                <div class="font-medium">{{ $pet->nama_pet ?? '-' }}</div>
+                                <div class="text-sm text-gray-500">{{ $pet->warna_tanda ?? '-' }}</div>
+                            </td>
+                            <td class="p-4">
+                                @if($pet->jenis_kelamin == 'M')
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        ♂ Jantan
+                                    </span>
+                                @elseif($pet->jenis_kelamin == 'F')
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
+                                        ♀ Betina
+                                    </span>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
+                            <td class="p-4 text-gray-800">
+                                {{ $pet->tanggal_lahir ? \Carbon\Carbon::parse($pet->tanggal_lahir)->format('d M Y') : '-' }}
+                            </td>
+                            <td class="p-4 text-gray-800">
+                                {{ $pet->nama_jenis_hewan ?? '-' }}
+                            </td>
+                            <td class="p-4 text-gray-800">
+                                {{ $pet->nama_ras ?? '-' }}
+                            </td>
+                            <td class="p-4 text-gray-800">
+                                <div class="font-medium">{{ $pet->nama_pemilik ?? '-' }}</div>
+                                <div class="text-sm text-gray-500">{{ $pet->email_pemilik ?? '-' }}</div>
+                            </td>
+                            <td class="p-4">
+                                <div class="flex gap-2">
+                                    <a href="{{ route('admin.pet.edit', $pet->idpet) }}" 
+                                       class="px-3 py-1 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition duration-200">
+                                        <i class="fas fa-edit mr-1"></i>Edit
+                                    </a>
+                                    <form action="{{ route('admin.pet.destroy', $pet->idpet) }}" 
+                                          method="POST" 
+                                          onsubmit="return confirm('Apakah Anda yakin ingin menghapus pet ini?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" 
+                                                class="px-3 py-1 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 transition duration-200">
+                                            <i class="fas fa-trash mr-1"></i>Hapus
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
                     @empty
-                    <tr>
-                        <td colspan="9" class="p-8 text-center text-gray-500">
-                            <i class="fas fa-dog text-4xl mb-4 text-gray-300"></i>
-                            <p class="text-lg">Tidak ada data pet</p>
-                            <a href="{{ route('admin.pet.create') }}" 
-                               class="inline-block mt-2 text-blue-600 hover:text-blue-800">
-                                Tambah data pertama
-                            </a>
-                        </td>
-                    </tr>
+                        <tr>
+                            <td colspan="9" class="p-8 text-center text-gray-500">
+                                <i class="fas fa-dog text-4xl mb-4 text-gray-300"></i>
+                                <p class="text-lg">Tidak ada data pet</p>
+                                <a href="{{ route('admin.pet.create') }}" 
+                                   class="inline-block mt-2 text-blue-600 hover:text-blue-800">
+                                    Tambah data pertama
+                                </a>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

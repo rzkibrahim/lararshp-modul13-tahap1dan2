@@ -3,16 +3,24 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Pemilik;
-use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PemilikController extends Controller
 {
     public function index()
     {
-        $pemiliks = Pemilik::with('user')
-            ->orderBy('idpemilik', 'asc')
+        $pemiliks = DB::table('pemilik')
+            ->join('user', 'pemilik.iduser', '=', 'user.iduser')
+            ->select(
+                'pemilik.idpemilik',
+                'pemilik.iduser',
+                'user.nama',
+                'user.email',
+                'pemilik.alamat',
+                'pemilik.no_wa'
+            )
+            ->orderBy('pemilik.idpemilik', 'asc')
             ->get();
 
         return view('rshp.admin.DataMaster.pemilik.index', compact('pemiliks'));
@@ -20,7 +28,13 @@ class PemilikController extends Controller
 
     public function create()
     {
-        $users = User::whereDoesntHave('pemilik')->get();
+        // Ambil user yang belum punya pemilik
+        $users = DB::table('user')
+            ->whereNotIn('iduser', function ($query) {
+                $query->select('iduser')->from('pemilik');
+            })
+            ->get();
+
         return view('rshp.admin.DataMaster.pemilik.create', compact('users'));
     }
 
@@ -28,12 +42,11 @@ class PemilikController extends Controller
     {
         $validated = $this->validatePemilik($request);
 
-        Pemilik::create([
+        DB::table('pemilik')->insert([
             'iduser' => $validated['iduser'],
             'alamat' => $validated['alamat'],
-            'no_wa' => $this->formatNoWa($validated['no_wa']),
+            'no_wa'  => $this->formatNoWa($validated['no_wa']),
         ]);
-
 
         return redirect()->route('admin.pemilik.index')
             ->with('success', 'Pemilik berhasil ditambahkan.');
@@ -41,8 +54,28 @@ class PemilikController extends Controller
 
     public function edit($id)
     {
-        $pemilik = Pemilik::with('user')->findOrFail($id);
-        $users = User::whereDoesntHave('pemilik')
+        $pemilik = DB::table('pemilik')
+            ->join('user', 'pemilik.iduser', '=', 'user.iduser')
+            ->select(
+                'pemilik.idpemilik',
+                'pemilik.iduser',
+                'user.nama',
+                'user.email',
+                'pemilik.alamat',
+                'pemilik.no_wa'
+            )
+            ->where('pemilik.idpemilik', $id)
+            ->first();
+
+        if (!$pemilik) {
+            abort(404, 'Data pemilik tidak ditemukan.');
+        }
+
+        // Ambil user yang belum punya pemilik atau user saat ini
+        $users = DB::table('user')
+            ->whereNotIn('iduser', function ($query) {
+                $query->select('iduser')->from('pemilik');
+            })
             ->orWhere('iduser', $pemilik->iduser)
             ->get();
 
@@ -51,14 +84,22 @@ class PemilikController extends Controller
 
     public function update(Request $request, $id)
     {
-        $pemilik = Pemilik::findOrFail($id);
         $validated = $this->validatePemilik($request, $id);
 
-        $pemilik->update([
-            'iduser' => $validated['iduser'],
-            'alamat' => $validated['alamat'],
-            'no_wa' => $this->formatNoWa($validated['no_wa']),
-        ]);
+        $pemilik = DB::table('pemilik')->where('idpemilik', $id)->first();
+
+        if (!$pemilik) {
+            return redirect()->route('admin.pemilik.index')
+                ->with('error', 'Pemilik tidak ditemukan.');
+        }
+
+        DB::table('pemilik')
+            ->where('idpemilik', $id)
+            ->update([
+                'iduser' => $validated['iduser'],
+                'alamat' => $validated['alamat'],
+                'no_wa'  => $this->formatNoWa($validated['no_wa']),
+            ]);
 
         return redirect()->route('admin.pemilik.index')
             ->with('success', 'Pemilik berhasil diupdate.');
@@ -66,14 +107,24 @@ class PemilikController extends Controller
 
     public function destroy($id)
     {
-        $pemilik = Pemilik::findOrFail($id);
+        $pemilik = DB::table('pemilik')->where('idpemilik', $id)->first();
 
-        if ($pemilik->pets()->count() > 0) {
+        if (!$pemilik) {
+            return redirect()->route('admin.pemilik.index')
+                ->with('error', 'Pemilik tidak ditemukan.');
+        }
+
+        // Cek apakah pemilik masih punya pet
+        $jumlahPet = DB::table('pet')
+            ->where('idpemilik', $id)
+            ->count();
+
+        if ($jumlahPet > 0) {
             return redirect()->route('admin.pemilik.index')
                 ->with('error', 'Pemilik tidak dapat dihapus karena masih memiliki pet.');
         }
 
-        $pemilik->delete();
+        DB::table('pemilik')->where('idpemilik', $id)->delete();
 
         return redirect()->route('admin.pemilik.index')
             ->with('success', 'Pemilik berhasil dihapus.');
@@ -83,9 +134,9 @@ class PemilikController extends Controller
 
     protected function validatePemilik(Request $request, $id = null)
     {
-        $userUniqueRule = $id ?
-            'unique:pemilik,iduser,' . $id . ',idpemilik' :
-            'unique:pemilik,iduser';
+        $userUniqueRule = $id
+            ? 'unique:pemilik,iduser,' . $id . ',idpemilik'
+            : 'unique:pemilik,iduser';
 
         return $request->validate([
             'iduser' => [
@@ -116,12 +167,6 @@ class PemilikController extends Controller
             'no_wa.max' => 'Nomor WhatsApp maksimal 15 karakter.',
             'no_wa.regex' => 'Format nomor WhatsApp tidak valid.',
         ]);
-    }
-
-
-    protected function formatNama($nama)
-    {
-        return trim(ucwords(strtolower($nama)));
     }
 
     protected function formatNoWa($no)

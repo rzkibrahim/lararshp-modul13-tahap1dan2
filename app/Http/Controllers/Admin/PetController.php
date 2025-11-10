@@ -3,17 +3,31 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Pet;
-use App\Models\Pemilik;
-use App\Models\RasHewan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PetController extends Controller
 {
     public function index()
     {
-        $pets = Pet::with(['pemilik.user', 'rasHewan.jenisHewan'])
-            ->orderBy('idpet', 'desc')
+        $pets = DB::table('pet')
+            ->leftJoin('pemilik', 'pet.idpemilik', '=', 'pemilik.idpemilik')
+            ->leftJoin('user', 'pemilik.iduser', '=', 'user.iduser')
+            ->leftJoin('ras_hewan', 'pet.idras_hewan', '=', 'ras_hewan.idras_hewan')
+            ->leftJoin('jenis_hewan', 'ras_hewan.idjenis_hewan', '=', 'jenis_hewan.idjenis_hewan')
+            ->select(
+                'pet.idpet',
+                'pet.nama as nama_pet',
+                'pet.jenis_kelamin',
+                'pet.tanggal_lahir',
+                'pet.warna_tanda',
+                'pemilik.idpemilik',
+                'user.nama as nama_pemilik',
+                'user.email as email_pemilik',
+                'ras_hewan.nama_ras',
+                'jenis_hewan.nama_jenis_hewan'
+            )
+            ->orderBy('pet.idpet', 'desc')
             ->get();
 
         return view('rshp.admin.DataMaster.pet.index', compact('pets'));
@@ -21,15 +35,32 @@ class PetController extends Controller
 
     public function create()
     {
-        $rasHewan = RasHewan::with('jenisHewan')->orderBy('nama_ras', 'asc')->get();
-        $pemiliks = Pemilik::with('user')->get();
+        $rasHewan = DB::table('ras_hewan')
+            ->leftJoin('jenis_hewan', 'ras_hewan.idjenis_hewan', '=', 'jenis_hewan.idjenis_hewan')
+            ->select('ras_hewan.idras_hewan', 'ras_hewan.nama_ras', 'jenis_hewan.nama_jenis_hewan')
+            ->orderBy('ras_hewan.nama_ras', 'asc')
+            ->get();
+
+        $pemiliks = DB::table('pemilik')
+            ->join('user', 'pemilik.iduser', '=', 'user.iduser')
+            ->select('pemilik.idpemilik', 'user.nama', 'user.email')
+            ->get();
+
         return view('rshp.admin.DataMaster.pet.create', compact('rasHewan', 'pemiliks'));
     }
 
     public function store(Request $request)
     {
         $validated = $this->validatePet($request);
-        $pet = $this->createPet($validated);
+
+        DB::table('pet')->insert([
+            'nama'           => $this->formatNamaPet($validated['nama']),
+            'idpemilik'      => $validated['idpemilik'],
+            'idras_hewan'    => $validated['idras_hewan'],
+            'jenis_kelamin'  => $this->normalizeJK($validated['jenis_kelamin']),
+            'tanggal_lahir'  => $validated['tanggal_lahir'] ?? null,
+            'warna_tanda'    => $validated['warna_tanda'] ?? null,
+        ]);
 
         return redirect()->route('admin.pet.index')
             ->with('success', 'Pet berhasil ditambahkan.');
@@ -37,18 +68,56 @@ class PetController extends Controller
 
     public function edit($id)
     {
-        $pet = Pet::with(['pemilik.user', 'rasHewan.jenisHewan'])->findOrFail($id);
-        $rasHewan = RasHewan::with('jenisHewan')->orderBy('nama_ras', 'asc')->get();
-        $pemiliks = Pemilik::with('user')->get();
+        $pet = DB::table('pet')
+            ->leftJoin('pemilik', 'pet.idpemilik', '=', 'pemilik.idpemilik')
+            ->leftJoin('user', 'pemilik.iduser', '=', 'user.iduser')
+            ->leftJoin('ras_hewan', 'pet.idras_hewan', '=', 'ras_hewan.idras_hewan')
+            ->leftJoin('jenis_hewan', 'ras_hewan.idjenis_hewan', '=', 'jenis_hewan.idjenis_hewan')
+            ->select(
+                'pet.*',
+                'user.nama as nama_pemilik',
+                'user.email as email_pemilik',
+                'ras_hewan.nama_ras',
+                'jenis_hewan.nama_jenis_hewan'
+            )
+            ->where('pet.idpet', $id)
+            ->first();
+
+        if (!$pet) {
+            abort(404, 'Data Pet tidak ditemukan.');
+        }
+
+        $rasHewan = DB::table('ras_hewan')
+            ->leftJoin('jenis_hewan', 'ras_hewan.idjenis_hewan', '=', 'jenis_hewan.idjenis_hewan')
+            ->select('ras_hewan.idras_hewan', 'ras_hewan.nama_ras', 'jenis_hewan.nama_jenis_hewan')
+            ->orderBy('ras_hewan.nama_ras', 'asc')
+            ->get();
+
+        $pemiliks = DB::table('pemilik')
+            ->join('user', 'pemilik.iduser', '=', 'user.iduser')
+            ->select('pemilik.idpemilik', 'user.nama', 'user.email')
+            ->get();
 
         return view('rshp.admin.DataMaster.pet.edit', compact('pet', 'rasHewan', 'pemiliks'));
     }
 
     public function update(Request $request, $id)
     {
-        $pet = Pet::findOrFail($id);
         $validated = $this->validatePet($request, $id);
-        $this->updatePet($pet, $validated);
+
+        $pet = DB::table('pet')->where('idpet', $id)->first();
+        if (!$pet) {
+            return redirect()->route('admin.pet.index')->with('error', 'Data Pet tidak ditemukan.');
+        }
+
+        DB::table('pet')->where('idpet', $id)->update([
+            'nama'           => $this->formatNamaPet($validated['nama']),
+            'idpemilik'      => $validated['idpemilik'],
+            'idras_hewan'    => $validated['idras_hewan'],
+            'jenis_kelamin'  => $this->normalizeJK($validated['jenis_kelamin']),
+            'tanggal_lahir'  => $validated['tanggal_lahir'] ?? null,
+            'warna_tanda'    => $validated['warna_tanda'] ?? null,
+        ]);
 
         return redirect()->route('admin.pet.index')
             ->with('success', 'Pet berhasil diupdate.');
@@ -56,8 +125,14 @@ class PetController extends Controller
 
     public function destroy($id)
     {
-        $pet = Pet::findOrFail($id);
-        $pet->delete();
+        $pet = DB::table('pet')->where('idpet', $id)->first();
+
+        if (!$pet) {
+            return redirect()->route('admin.pet.index')
+                ->with('error', 'Data Pet tidak ditemukan.');
+        }
+
+        DB::table('pet')->where('idpet', $id)->delete();
 
         return redirect()->route('admin.pet.index')
             ->with('success', 'Pet berhasil dihapus.');
@@ -68,13 +143,12 @@ class PetController extends Controller
     protected function validatePet(Request $request, $id = null)
     {
         return $request->validate([
-            'nama' => ['required','string','max:100','min:2'],             // kolom DB: nama (varchar 100)
-            'idpemilik' => ['required','exists:pemilik,idpemilik'],
-            'idras_hewan' => ['required','exists:ras_hewan,idras_hewan'],
-            // terima M/F atau Jantan/Betina, nanti dinormalisasi ke M/F
-            'jenis_kelamin' => ['required','in:M,F,Jantan,Betina'],
-            'tanggal_lahir' => ['nullable','date','before_or_equal:today'],
-            'warna_tanda' => ['nullable','string','max:45'],               // kolom DB: warna_tanda (varchar 45)
+            'nama' => ['required', 'string', 'max:100', 'min:2'],
+            'idpemilik' => ['required', 'exists:pemilik,idpemilik'],
+            'idras_hewan' => ['required', 'exists:ras_hewan,idras_hewan'],
+            'jenis_kelamin' => ['required', 'in:M,F,Jantan,Betina'],
+            'tanggal_lahir' => ['nullable', 'date', 'before_or_equal:today'],
+            'warna_tanda' => ['nullable', 'string', 'max:45'],
         ], [
             'nama.required' => 'Nama pet wajib diisi.',
             'nama.max' => 'Nama pet maksimal 100 karakter.',
@@ -91,38 +165,10 @@ class PetController extends Controller
         ]);
     }
 
-    protected function createPet(array $data)
-    {
-        return Pet::create([
-            'nama'           => $this->formatNamaPet($data['nama']),
-            'idpemilik'      => $data['idpemilik'],
-            'idras_hewan'    => $data['idras_hewan'],
-            'jenis_kelamin'  => $this->normalizeJK($data['jenis_kelamin']),
-            'tanggal_lahir'  => $data['tanggal_lahir'] ?? null,
-            'warna_tanda'    => $data['warna_tanda'] ?? null,
-        ]);
-    }
-
-    protected function updatePet(Pet $pet, array $data)
-    {
-        $pet->update([
-            'nama'           => $this->formatNamaPet($data['nama']),
-            'idpemilik'      => $data['idpemilik'],
-            'idras_hewan'    => $data['idras_hewan'],
-            'jenis_kelamin'  => $this->normalizeJK($data['jenis_kelamin']),
-            'tanggal_lahir'  => $data['tanggal_lahir'] ?? null,
-            'warna_tanda'    => $data['warna_tanda'] ?? null,
-        ]);
-
-        return $pet;
-    }
-
     protected function normalizeJK(string $val): string
     {
-        // Terima "Jantan"/"Betina" atau "M"/"F" → simpan 'M' atau 'F' sesuai isi DB
         $v = strtoupper(trim($val));
-        if ($v === 'BETINA' || $v === 'F') return 'F';
-        return 'M';
+        return ($v === 'BETINA' || $v === 'F') ? 'F' : 'M';
     }
 
     protected function formatNamaPet($nama)

@@ -1,17 +1,24 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\RasHewan;
-use App\Models\JenisHewan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class RasHewanController extends Controller
 {
     public function index()
     {
-        $rasHewan = RasHewan::with('jenisHewan')
-            ->orderBy('idras_hewan', 'asc')
+        $rasHewan = DB::table('ras_hewan')
+            ->join('jenis_hewan', 'ras_hewan.idjenis_hewan', '=', 'jenis_hewan.idjenis_hewan')
+            ->select(
+                'ras_hewan.idras_hewan',
+                'ras_hewan.nama_ras',
+                'jenis_hewan.nama_jenis_hewan',
+                'ras_hewan.idjenis_hewan'
+            )
+            ->orderBy('ras_hewan.idras_hewan', 'asc')
             ->get();
 
         return view('rshp.admin.DataMaster.ras-hewan.index', compact('rasHewan'));
@@ -19,17 +26,21 @@ class RasHewanController extends Controller
 
     public function create()
     {
-        $jenisHewan = JenisHewan::orderBy('nama_jenis_hewan', 'asc')->get();
+        $jenisHewan = DB::table('jenis_hewan')
+            ->orderBy('nama_jenis_hewan', 'asc')
+            ->get();
+
         return view('rshp.admin.DataMaster.ras-hewan.create', compact('jenisHewan'));
     }
 
     public function store(Request $request)
     {
-        // Validasi input
-        $validatedData = $this->validateRasHewan($request);
+        $validated = $this->validateRasHewan($request);
 
-        // Helper untuk menyimpan data
-        $rasHewan = $this->createRasHewan($validatedData);
+        DB::table('ras_hewan')->insert([
+            'nama_ras' => $this->formatNamaRas($validated['nama_ras']),
+            'idjenis_hewan' => $validated['idjenis_hewan'],
+        ]);
 
         return redirect()->route('admin.ras-hewan.index')
             ->with('success', 'Ras hewan berhasil ditambahkan.');
@@ -37,20 +48,29 @@ class RasHewanController extends Controller
 
     public function edit($id)
     {
-        $rasHewan = RasHewan::findOrFail($id);
-        $jenisHewan = JenisHewan::orderBy('nama_jenis_hewan', 'asc')->get();
+        $rasHewan = DB::table('ras_hewan')->where('idras_hewan', $id)->first();
+
+        if (!$rasHewan) {
+            abort(404, 'Data tidak ditemukan.');
+        }
+
+        $jenisHewan = DB::table('jenis_hewan')
+            ->orderBy('nama_jenis_hewan', 'asc')
+            ->get();
+
         return view('rshp.admin.DataMaster.ras-hewan.edit', compact('rasHewan', 'jenisHewan'));
     }
 
     public function update(Request $request, $id)
     {
-        $rasHewan = RasHewan::findOrFail($id);
+        $validated = $this->validateRasHewan($request, $id);
 
-        // Validasi input
-        $validatedData = $this->validateRasHewan($request, $id);
-
-        // Helper untuk update data
-        $this->updateRasHewan($rasHewan, $validatedData);
+        DB::table('ras_hewan')
+            ->where('idras_hewan', $id)
+            ->update([
+                'nama_ras' => $this->formatNamaRas($validated['nama_ras']),
+                'idjenis_hewan' => $validated['idjenis_hewan'],
+            ]);
 
         return redirect()->route('admin.ras-hewan.index')
             ->with('success', 'Ras hewan berhasil diupdate.');
@@ -58,31 +78,32 @@ class RasHewanController extends Controller
 
     public function destroy($id)
     {
-        $rasHewan = RasHewan::findOrFail($id);
-        
-        // Cek apakah ras hewan sedang digunakan di pet
-        if ($rasHewan->pets()->count() > 0) {
+        // Cek apakah ras hewan sedang digunakan di tabel pet
+        $usedInPet = DB::table('pet')->where('idras_hewan', $id)->count();
+
+        if ($usedInPet > 0) {
             return redirect()->route('admin.ras-hewan.index')
                 ->with('error', 'Ras hewan tidak dapat dihapus karena masih digunakan di data pet.');
         }
 
-        $rasHewan->delete();
+        $deleted = DB::table('ras_hewan')->where('idras_hewan', $id)->delete();
 
-        return redirect()->route('admin.ras-hewan.index')
-            ->with('success', 'Ras hewan berhasil dihapus.');
+        if ($deleted) {
+            return redirect()->route('admin.ras-hewan.index')
+                ->with('success', 'Ras hewan berhasil dihapus.');
+        } else {
+            return redirect()->route('admin.ras-hewan.index')
+                ->with('error', 'Data tidak ditemukan atau gagal dihapus.');
+        }
     }
 
-    // ==================== HELPER METHODS ====================
+    // ==================== VALIDASI & HELPER ====================
 
-    /**
-     * Validasi data ras hewan
-     */
     protected function validateRasHewan(Request $request, $id = null)
     {
-        // Unique rule untuk kombinasi nama_ras dan idjenis_hewan
-        $uniqueRule = $id ? 
-            'unique:ras_hewan,nama_ras,' . $id . ',idras_hewan,idjenis_hewan,' . $request->idjenis_hewan : 
-            'unique:ras_hewan,nama_ras,NULL,idras_hewan,idjenis_hewan,' . $request->idjenis_hewan;
+        $uniqueRule = $id
+            ? 'unique:ras_hewan,nama_ras,' . $id . ',idras_hewan,idjenis_hewan,' . $request->idjenis_hewan
+            : 'unique:ras_hewan,nama_ras,NULL,idras_hewan,idjenis_hewan,' . $request->idjenis_hewan;
 
         return $request->validate([
             'nama_ras' => [
@@ -90,11 +111,11 @@ class RasHewanController extends Controller
                 'string',
                 'max:100',
                 'min:2',
-                $uniqueRule
+                $uniqueRule,
             ],
             'idjenis_hewan' => [
                 'required',
-                'exists:jenis_hewan,idjenis_hewan'
+                'exists:jenis_hewan,idjenis_hewan',
             ],
         ], [
             'nama_ras.required' => 'Nama ras wajib diisi.',
@@ -106,33 +127,6 @@ class RasHewanController extends Controller
         ]);
     }
 
-    /**
-     * Helper untuk membuat ras hewan baru
-     */
-    protected function createRasHewan(array $data)
-    {
-        return RasHewan::create([
-            'nama_ras' => $this->formatNamaRas($data['nama_ras']),
-            'idjenis_hewan' => $data['idjenis_hewan'],
-        ]);
-    }
-
-    /**
-     * Helper untuk update ras hewan
-     */
-    protected function updateRasHewan(RasHewan $rasHewan, array $data)
-    {
-        $rasHewan->update([
-            'nama_ras' => $this->formatNamaRas($data['nama_ras']),
-            'idjenis_hewan' => $data['idjenis_hewan'],
-        ]);
-
-        return $rasHewan;
-    }
-
-    /**
-     * Helper untuk format nama menjadi Title Case
-     */
     protected function formatNamaRas($nama)
     {
         return trim(ucwords(strtolower($nama)));

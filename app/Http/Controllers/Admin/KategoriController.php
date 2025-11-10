@@ -4,16 +4,27 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Kategori;
+use Illuminate\Support\Facades\DB;
 
 class KategoriController extends Controller
 {
     public function index()
     {
-        $kategori = Kategori::all();
-        // ✅ PERBAIKI - tambahkan 'admin'
+        // Ambil semua kategori + hitung jumlah data di kode_tindakan_terapi (LEFT JOIN agar yang 0 tetap muncul)
+        $kategori = DB::table('kategori')
+            ->leftJoin('kode_tindakan_terapi', 'kategori.idkategori', '=', 'kode_tindakan_terapi.idkategori')
+            ->select(
+                'kategori.idkategori',
+                'kategori.nama_kategori',
+                DB::raw('COUNT(kode_tindakan_terapi.idkode_tindakan_terapi) AS jumlah_tindakan')
+            )
+            ->groupBy('kategori.idkategori', 'kategori.nama_kategori')
+            ->orderBy('kategori.idkategori', 'asc')
+            ->get();
+
         return view('rshp.admin.DataMaster.kategori.index', compact('kategori'));
     }
+
 
     public function create()
     {
@@ -23,15 +34,15 @@ class KategoriController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_kategori' => 'required|string|max:100|unique:kategori,nama_kategori'
+            'nama_kategori' => 'required|string|max:100|unique:kategori,nama_kategori',
         ], [
             'nama_kategori.required' => 'Nama kategori wajib diisi',
             'nama_kategori.unique' => 'Nama kategori sudah ada',
-            'nama_kategori.max' => 'Nama kategori maksimal 100 karakter'
+            'nama_kategori.max' => 'Nama kategori maksimal 100 karakter',
         ]);
 
-        Kategori::create([
-            'nama_kategori' => $request->nama_kategori
+        DB::table('kategori')->insert([
+            'nama_kategori' => trim(ucwords(strtolower($request->nama_kategori))),
         ]);
 
         return redirect()->route('admin.kategori.index')
@@ -40,42 +51,58 @@ class KategoriController extends Controller
 
     public function edit($id)
     {
-        $kategori = Kategori::findOrFail($id);
+        $kategori = DB::table('kategori')->where('idkategori', $id)->first();
+
+        if (!$kategori) {
+            abort(404, 'Data kategori tidak ditemukan.');
+        }
+
         return view('rshp.admin.DataMaster.kategori.edit', compact('kategori'));
     }
 
     public function update(Request $request, $id)
     {
-        $kategori = Kategori::findOrFail($id);
-
         $request->validate([
-            'nama_kategori' => 'required|string|max:100|unique:kategori,nama_kategori,' . $id . ',idkategori'
+            'nama_kategori' => 'required|string|max:100|unique:kategori,nama_kategori,' . $id . ',idkategori',
         ], [
             'nama_kategori.required' => 'Nama kategori wajib diisi',
             'nama_kategori.unique' => 'Nama kategori sudah ada',
-            'nama_kategori.max' => 'Nama kategori maksimal 100 karakter'
+            'nama_kategori.max' => 'Nama kategori maksimal 100 karakter',
         ]);
 
-        $kategori->update([
-            'nama_kategori' => $request->nama_kategori
-        ]);
+        $kategori = DB::table('kategori')->where('idkategori', $id)->first();
+
+        if (!$kategori) {
+            return redirect()->route('admin.kategori.index')
+                ->with('error', 'Kategori tidak ditemukan');
+        }
+
+        DB::table('kategori')
+            ->where('idkategori', $id)
+            ->update([
+                'nama_kategori' => trim(ucwords(strtolower($request->nama_kategori))),
+            ]);
 
         return redirect()->route('admin.kategori.index')
             ->with('success', 'Kategori berhasil diupdate');
     }
 
+
     public function destroy($id)
     {
-        $kategori = Kategori::findOrFail($id);
-        
-        if ($kategori->kodeTindakanTerapi()->count() > 0) {
+        // Periksa apakah kategori masih digunakan di tabel lain
+        $digunakan = DB::table('kode_tindakan_terapi')
+            ->where('idkategori', $id)
+            ->count();
+
+        if ($digunakan > 0) {
             return redirect()->route('admin.kategori.index')
-                ->with('error', 'Kategori tidak dapat dihapus karena masih digunakan');
+                ->with('error', 'Kategori tidak dapat dihapus karena masih digunakan.');
         }
 
-        $kategori->delete();
+        DB::table('kategori')->where('idkategori', $id)->delete();
 
         return redirect()->route('admin.kategori.index')
-            ->with('success', 'Kategori berhasil dihapus');
+            ->with('success', 'Kategori berhasil dihapus.');
     }
 }

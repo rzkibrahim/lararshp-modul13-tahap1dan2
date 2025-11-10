@@ -53,16 +53,26 @@
                                  class="px-3 py-1 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition duration-200">
                                   <i class="fas fa-edit mr-1"></i>Edit
                               </a>
-                              <form action="{{ route('admin.kategori-klinis.destroy', $item->idkategori_klinis) }}" 
-                                    method="POST" 
-                                    onsubmit="return confirm('Apakah Anda yakin ingin menghapus kategori klinis ini?')">
-                                  @csrf
-                                  @method('DELETE')
-                                  <button type="submit" 
-                                          class="px-3 py-1 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 transition duration-200">
-                                      <i class="fas fa-trash mr-1"></i>Hapus
+
+                              {{-- Tombol Hapus / Kunci --}}
+                              @if($item->jumlah_tindakan == 0)
+                                  <form action="{{ route('admin.kategori-klinis.destroy', $item->idkategori_klinis) }}" 
+                                        method="POST" 
+                                        onsubmit="return confirm('Apakah Anda yakin ingin menghapus kategori klinis ini?')">
+                                      @csrf
+                                      @method('DELETE')
+                                      <button type="submit" 
+                                              class="px-3 py-1 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 transition duration-200">
+                                          <i class="fas fa-trash mr-1"></i>Hapus
+                                      </button>
+                                  </form>
+                              @else
+                                  <button disabled 
+                                          class="px-3 py-1 text-sm text-gray-400 bg-gray-200 rounded-lg cursor-not-allowed" 
+                                          title="Kategori sedang digunakan">
+                                      <i class="fas fa-lock mr-1"></i>Terkunci
                                   </button>
-                              </form>
+                              @endif
                           </div>
                       </td>
                   </tr>
