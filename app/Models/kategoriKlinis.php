@@ -8,9 +8,14 @@ class KategoriKlinis extends Model
 {
     protected $table = 'kategori_klinis';
     protected $primaryKey = 'idkategori_klinis';
-    
-    protected $fillable = ['nama_kategori_klinis', 'idkategori'];
-    
+
+    // 🚫 Nonaktifkan timestamps Laravel
+    public $timestamps = false;
+
+    protected $fillable = [
+        'nama_kategori_klinis',
+    ];
+
     // Belongs to Kategori
     public function kategori()
     {

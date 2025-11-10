@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
+use App\Models\RoleUser;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+
 
 class UserController extends Controller
 {
@@ -17,31 +20,69 @@ class UserController extends Controller
 
     public function create()
     {
-        return view('rshp.admin.DataMaster.user.create');
+        $roles = Role::orderBy('nama_role', 'asc')->get();
+
+        return view('rshp.admin.DataMaster.user.create', compact('roles'));
     }
 
     public function store(Request $request)
     {
-        $data = $this->validateUser($request);
-        $this->createUser($data);
+        $validated = $request->validate([
+            'nama' => 'required|string|max:255',
+            'email' => 'required|email|unique:user,email',
+            'password' => 'required|min:3|confirmed',
+            'role_ids' => 'nullable|array',
+            'role_ids.*' => 'exists:role,idrole',
+        ]);
 
-        return redirect()->route('admin.user.index')->with('success', 'User berhasil ditambahkan!');
+        // Simpan user
+        $user = User::create([
+            'nama' => $validated['nama'],
+            'email' => $validated['email'],
+            'password' => bcrypt($validated['password']),
+        ]);
+
+        // Jika ada role yang dipilih
+        if (!empty($validated['role_ids'])) {
+            $user->roles()->attach($validated['role_ids']);
+        }
+
+        return redirect()->route('admin.user.index')
+            ->with('success', 'User berhasil ditambahkan.');
     }
+
 
     public function edit($id)
     {
-        $user = User::findOrFail($id);
-        return view('rshp.admin.DataMaster.user.edit', compact('user'));
+        $user = User::with('roles')->findOrFail($id);
+        $roles = RoleUser::all();
+
+        return view('rshp.admin.DataMaster.user.edit', compact('user', 'roles'));
     }
 
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);
-        $data = $this->validateUser($request, $id);
-        $this->updateUser($user, $data);
 
-        return redirect()->route('admin.user.index')->with('success', 'Data user berhasil diperbarui!');
+        $validated = $request->validate([
+            'nama' => 'required|string|max:255',
+            'email' => 'required|email|unique:user,email,' . $id . ',iduser',
+            'role_ids' => 'nullable|array',
+            'role_ids.*' => 'exists:role,idrole',
+        ]);
+
+        $user->update([
+            'nama' => $validated['nama'],
+            'email' => $validated['email'],
+        ]);
+
+        // Sync role baru (hapus lama dan tambahkan baru)
+        $user->roles()->sync($validated['role_ids'] ?? []);
+
+        return redirect()->route('admin.user.index')
+            ->with('success', 'User berhasil diperbarui.');
     }
+
 
     public function destroy($id)
     {

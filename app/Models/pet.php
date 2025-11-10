@@ -8,16 +8,22 @@ class Pet extends Model
 {
     protected $table = 'pet';
     protected $primaryKey = 'idpet';
-    
-    protected $fillable = ['nama', 'tanggal_lahir', 'warna_tanda', 'jenis_kelamin', 'idpemilik', 'idras_hewan'];
-    
-    // Belongs to Pemilik
+    public $timestamps = false; // tabel pet tidak punya created_at/updated_at
+
+    protected $fillable = [
+        'nama',
+        'tanggal_lahir',
+        'warna_tanda',
+        'jenis_kelamin',
+        'idpemilik',
+        'idras_hewan',
+    ];
+
     public function pemilik()
     {
         return $this->belongsTo(Pemilik::class, 'idpemilik', 'idpemilik');
     }
-    
-    // Belongs to Ras Hewan
+
     public function rasHewan()
     {
         return $this->belongsTo(RasHewan::class, 'idras_hewan', 'idras_hewan');

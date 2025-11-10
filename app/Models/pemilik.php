@@ -8,16 +8,20 @@ class Pemilik extends Model
 {
     protected $table = 'pemilik';
     protected $primaryKey = 'idpemilik';
-    
-    protected $fillable = ['no_wa', 'alamat', 'iduser'];
-    
-    // One to One dengan User
+    public $timestamps = false;
+
+    protected $fillable = [
+        'iduser',
+        'nama',
+        'alamat',
+        'no_wa'
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class, 'iduser', 'iduser');
     }
-    
-    // One to Many dengan Pet
+
     public function pets()
     {
         return $this->hasMany(Pet::class, 'idpemilik', 'idpemilik');

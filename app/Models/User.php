@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Foundation\Auth\User as Authenticatable; // ✅ penting
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class User extends Authenticatable
 {
-    use Notifiable;
+    use HasFactory, Notifiable;
 
     protected $table = 'user';
     protected $primaryKey = 'iduser';
@@ -21,7 +22,6 @@ class User extends Authenticatable
 
     protected $hidden = [
         'password',
-        'remember_token',
     ];
 
     protected $casts = [
@@ -37,8 +37,7 @@ class User extends Authenticatable
     // Relasi Many to Many dengan Role (untuk login & akses cepat)
     public function roles()
     {
-        return $this->belongsToMany(Role::class, 'role_user', 'iduser', 'idrole')
-            ->withPivot('status', 'idrole_user');
+        return $this->belongsToMany(Role::class, 'role_user', 'iduser', 'idrole');
     }
 
     // Relasi One to Many dengan RoleUser (untuk management detail)
