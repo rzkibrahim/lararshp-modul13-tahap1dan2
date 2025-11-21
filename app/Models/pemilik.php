@@ -12,7 +12,6 @@ class Pemilik extends Model
 
     protected $fillable = [
         'iduser',
-        'nama',
         'alamat',
         'no_wa'
     ];
@@ -25,5 +24,11 @@ class Pemilik extends Model
     public function pets()
     {
         return $this->hasMany(Pet::class, 'idpemilik', 'idpemilik');
+    }
+
+    // Accessor untuk mendapatkan nama pemilik
+    public function getNamaAttribute()
+    {
+        return $this->user ? $this->user->nama : 'N/A';
     }
 }

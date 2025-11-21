@@ -22,4 +22,17 @@ class DetailRekamMedis extends Model
     {
         return $this->belongsTo(KodeTindakanTerapi::class, 'idkode_tindakan_terapi', 'idkode_tindakan_terapi');
     }
+    
+    // ✅ TAMBAHKAN: Akses ke temuDokter melalui rekamMedis
+    public function temuDokter()
+    {
+        return $this->hasOneThrough(
+            TemuDokter::class,
+            RekamMedis::class,
+            'idrekam_medis', // Foreign key on rekam_medis table
+            'idreservasi_dokter', // Foreign key on temu_dokter table
+            'idrekam_medis', // Local key on detail_rekam_medis table
+            'idreservasi_dokter' // Local key on rekam_medis table
+        );
+    }
 }

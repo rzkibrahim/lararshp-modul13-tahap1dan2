@@ -1,12 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Resepsionis;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use App\Models\Pemilik;
+use App\Models\User;
 
-class PemilikController extends Controller
+class RegistrasiPemilikController extends Controller
 {
     public function index()
     {
@@ -23,7 +26,7 @@ class PemilikController extends Controller
             ->orderBy('pemilik.idpemilik', 'asc')
             ->get();
 
-        return view('rshp.admin.DataMaster.pemilik.index', compact('pemiliks'));
+        return view('rshp.resepsionis.pemilik.index', compact('pemiliks'));
     }
 
     public function create()
@@ -33,9 +36,10 @@ class PemilikController extends Controller
             ->whereNotIn('iduser', function ($query) {
                 $query->select('iduser')->from('pemilik');
             })
+            ->orderBy('nama', 'asc')
             ->get();
 
-        return view('rshp.admin.DataMaster.pemilik.create', compact('users'));
+        return view('rshp.resepsionis.pemilik.create', compact('users'));
     }
 
     public function store(Request $request)
@@ -48,7 +52,7 @@ class PemilikController extends Controller
             'no_wa'  => $this->formatNoWa($validated['no_wa']),
         ]);
 
-        return redirect()->route('admin.pemilik.index')
+        return redirect()->route('resepsionis.pemilik.index')
             ->with('success', 'Pemilik berhasil ditambahkan.');
     }
 
@@ -71,7 +75,7 @@ class PemilikController extends Controller
             abort(404, 'Data pemilik tidak ditemukan.');
         }
 
-        return view('rshp.admin.DataMaster.pemilik.edit', compact('pemilik'));
+        return view('rshp.resepsionis.pemilik.edit', compact('pemilik'));
     }
 
 
@@ -87,7 +91,7 @@ class PemilikController extends Controller
         $pemilik = DB::table('pemilik')->where('idpemilik', $id)->first();
 
         if (!$pemilik) {
-            return redirect()->route('admin.pemilik.index')
+            return redirect()->route('resepsionis.pemilik.index')
                 ->with('error', 'Data pemilik tidak ditemukan.');
         }
 
@@ -107,7 +111,7 @@ class PemilikController extends Controller
                 'no_wa'  => $request->no_wa,
             ]);
 
-        return redirect()->route('admin.pemilik.index')
+        return redirect()->route('resepsionis.pemilik.index')
             ->with('success', 'Data pemilik berhasil diperbarui.');
     }
 
@@ -117,7 +121,7 @@ class PemilikController extends Controller
         $pemilik = DB::table('pemilik')->where('idpemilik', $id)->first();
 
         if (!$pemilik) {
-            return redirect()->route('admin.pemilik.index')
+            return redirect()->route('resepsionis.pemilik.index')
                 ->with('error', 'Pemilik tidak ditemukan.');
         }
 
@@ -127,13 +131,13 @@ class PemilikController extends Controller
             ->count();
 
         if ($jumlahPet > 0) {
-            return redirect()->route('admin.pemilik.index')
+            return redirect()->route('resepsionis.pemilik.index')
                 ->with('error', 'Pemilik tidak dapat dihapus karena masih memiliki pet.');
         }
 
         DB::table('pemilik')->where('idpemilik', $id)->delete();
 
-        return redirect()->route('admin.pemilik.index')
+        return redirect()->route('resepsionis.pemilik.index')
             ->with('success', 'Pemilik berhasil dihapus.');
     }
 

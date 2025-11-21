@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Models\JenisHewan;
 
 class JenisHewanController extends Controller
 {
@@ -24,7 +26,6 @@ class JenisHewanController extends Controller
 
         return view('rshp.admin.DataMaster.jenis-hewan.index', compact('jenisHewan'));
     }
-
 
     public function create()
     {
@@ -68,10 +69,29 @@ class JenisHewanController extends Controller
 
     public function destroy($id)
     {
-        DB::table('jenis_hewan')->where('idjenis_hewan', $id)->delete();
-
-        return redirect()->route('admin.jenis-hewan.index')
-            ->with('success', 'Jenis hewan berhasil dihapus.');
+        try {
+            $jenisHewan = JenisHewan::findOrFail($id);
+            
+            // Cek apakah jenis hewan memiliki relasi dengan ras_hewan
+            $hasRasHewan = DB::table('ras_hewan')
+                ->where('idjenis_hewan', $id)
+                ->exists();
+            
+            if ($hasRasHewan) {
+                return redirect()->route('admin.jenis-hewan.index')
+                    ->with('error', 'Jenis hewan tidak dapat dihapus karena masih memiliki data ras hewan!');
+            }
+            
+            // Jika tidak ada relasi, hapus jenis hewan
+            $jenisHewan->delete();
+            
+            return redirect()->route('admin.jenis-hewan.index')
+                ->with('success', 'Jenis hewan berhasil dihapus!');
+                
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Gagal menghapus jenis hewan: ' . $e->getMessage());
+        }
     }
 
     // 🔹 Validasi input data
@@ -100,7 +120,7 @@ class JenisHewanController extends Controller
                 'nama_jenis_hewan' => $this->formatJenisHewanName($data['nama_jenis_hewan']),
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error creating Jenis Hewan: ' . $e->getMessage());
+            Log::error('Error creating Jenis Hewan: ' . $e->getMessage());
             throw new \Exception('Gagal menambahkan jenis hewan.');
         }
     }

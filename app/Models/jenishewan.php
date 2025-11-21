@@ -16,4 +16,22 @@ class JenisHewan extends Model
     {
         return $this->hasMany(RasHewan::class, 'idjenis_hewan', 'idjenis_hewan');
     }
+    
+    // Method untuk cek apakah bisa dihapus
+    public function canBeDeleted()
+    {
+        return !$this->rasHewan()->exists();
+    }
+    
+    // Method untuk mendapatkan pesan error jika tidak bisa dihapus
+    public function getDeleteErrorMessage()
+    {
+        return 'Jenis hewan tidak dapat dihapus karena masih memiliki data ras hewan.';
+    }
+    
+    // Method untuk mendapatkan jumlah ras hewan
+    public function getJumlahRasAttribute()
+    {
+        return $this->rasHewan()->count();
+    }
 }

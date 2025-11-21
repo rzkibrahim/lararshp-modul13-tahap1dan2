@@ -8,7 +8,7 @@ class Pet extends Model
 {
     protected $table = 'pet';
     protected $primaryKey = 'idpet';
-    public $timestamps = false; // tabel pet tidak punya created_at/updated_at
+    public $timestamps = false;
 
     protected $fillable = [
         'nama',
@@ -35,9 +35,17 @@ class Pet extends Model
         return $this->hasMany(RekamMedis::class, 'idpet', 'idpet');
     }
     
-    // One to Many dengan Detail Rekam Medis
-    public function detailRekamMedis()
+    // One to Many dengan Temu Dokter
+    public function temuDokter()
     {
-        return $this->hasMany(DetailRekamMedis::class, 'idpet', 'idpet');
+        return $this->hasMany(TemuDokter::class, 'idpet', 'idpet');
+    }
+    
+    // Accessor untuk mendapatkan nama pemilik melalui relasi
+    public function getNamaPemilikAttribute()
+    {
+        return $this->pemilik && $this->pemilik->user 
+            ? $this->pemilik->user->nama 
+            : 'N/A';
     }
 }

@@ -11,8 +11,6 @@ class isResepsionis
 {
     /**
      * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -24,12 +22,12 @@ class isResepsionis
         // Ambil role dari session
         $userRole = session('user_role');
 
-        // Cek apakah user adalah admin (role ID = 1)
-        if ($userRole === 4) {
+        // Cek apakah user adalah resepsionis (role ID = 4)
+        if ($userRole == 4) {
             return $next($request);
         }
 
-        // Jika bukan admin, redirect ke home
-        return redirect()->route('home')->with('error', 'Anda tidak memiliki akses ke halaman tersebut.');
+        // Jika bukan resepsionis, redirect ke home
+        return redirect()->route('home')->with('error', 'Anda tidak memiliki akses ke halaman resepsionis.');
     }
 }

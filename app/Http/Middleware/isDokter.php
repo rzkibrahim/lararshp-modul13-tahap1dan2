@@ -16,20 +16,17 @@ class isDokter
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Cek apakah user BELUM login
         if (!Auth::check()) {
             return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu');
         }
 
-        // Ambil role dari session
         $userRole = session('user_role');
 
-        // Cek apakah user adalah admin (role ID = 1)
-        if ($userRole === 2) {
+        // Cek apakah user adalah dokter (role ID = 2)
+        if ($userRole == 2) {
             return $next($request);
         }
 
-        // Jika bukan admin, redirect ke home
         return redirect()->route('home')->with('error', 'Anda tidak memiliki akses ke halaman tersebut.');
     }
 }

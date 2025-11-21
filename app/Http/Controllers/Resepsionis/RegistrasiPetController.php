@@ -1,13 +1,16 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Resepsionis;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Pet;
+use App\Models\Pemilik;
+use App\Models\JenisHewan;
+use App\Models\RasHewan;
 
-class PetController extends Controller
+class RegistrasiPetController extends Controller
 {
     public function index()
     {
@@ -31,7 +34,7 @@ class PetController extends Controller
             ->orderBy('pet.idpet', 'desc')
             ->get();
 
-        return view('rshp.admin.DataMaster.pet.index', compact('pets'));
+        return view('rshp.resepsionis.pet.index', compact('pets'));
     }
 
     public function create()
@@ -58,7 +61,7 @@ class PetController extends Controller
             ->orderBy('ras_hewan.nama_ras', 'asc')
             ->get();
 
-        return view('rshp.admin.DataMaster.pet.create', compact('rasHewan', 'pemiliks'));
+        return view('rshp.resepsionis.pet.create', compact('rasHewan', 'pemiliks'));
     }
 
     public function store(Request $request)
@@ -74,7 +77,7 @@ class PetController extends Controller
             'warna_tanda'    => $validated['warna_tanda'] ?? null,
         ]);
 
-        return redirect()->route('admin.pet.index')
+        return redirect()->route('resepsionis.pet.index')
             ->with('success', 'Pet berhasil ditambahkan.');
     }
 
@@ -110,7 +113,7 @@ class PetController extends Controller
             ->select('pemilik.idpemilik', 'user.nama', 'user.email')
             ->get();
 
-        return view('rshp.admin.DataMaster.pet.edit', compact('pet', 'rasHewan', 'pemilik'));
+        return view('rshp.resepsionis.pet.edit', compact('pet', 'rasHewan', 'pemilik'));
     }
 
     public function update(Request $request, $id)
@@ -119,7 +122,7 @@ class PetController extends Controller
 
         $pet = DB::table('pet')->where('idpet', $id)->first();
         if (!$pet) {
-            return redirect()->route('admin.pet.index')->with('error', 'Data Pet tidak ditemukan.');
+            return redirect()->route('resepsionis.pet.index')->with('error', 'Data Pet tidak ditemukan.');
         }
 
         DB::table('pet')->where('idpet', $id)->update([
@@ -131,7 +134,7 @@ class PetController extends Controller
             'warna_tanda'    => $validated['warna_tanda'] ?? null,
         ]);
 
-        return redirect()->route('admin.pet.index')
+        return redirect()->route('resepsionis.pet.index')
             ->with('success', 'Pet berhasil diupdate.');
     }
 
@@ -151,14 +154,14 @@ class PetController extends Controller
                 ->exists();
             
             if ($hasTemuDokter || $hasRekamMedis) {
-                return redirect()->route('admin.pet.index')
+                return redirect()->route('resepsionis.pet.index')
                     ->with('error', 'Pet tidak dapat dihapus karena masih memiliki data antrian atau rekam medis!');
             }
             
             // Jika tidak ada relasi, hapus pet
             $pet->delete();
             
-            return redirect()->route('admin.pet.index')
+            return redirect()->route('resepsionis.pet.index')
                 ->with('success', 'Pet berhasil dihapus!');
                 
         } catch (\Exception $e) {
