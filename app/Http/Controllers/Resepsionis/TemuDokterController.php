@@ -11,6 +11,7 @@ use App\Models\RoleUser;
 use App\Models\User;
 use App\Models\Pemilik;
 
+
 class TemuDokterController extends Controller
 {
     public function index(Request $request)
@@ -110,7 +111,7 @@ class TemuDokterController extends Controller
                 'status' => 0,
             ]);
 
-            return redirect()->route('resepsionis.temu-dokter', [
+            return redirect()->route('resepsionis.temu-dokter.index', [
                 'date' => $tanggal_daftar,
                 'tanggal_daftar' => $tanggal_daftar
             ])->with('success', 'Antrian berhasil dibuat! Nomor antrian: ' . $nextNo);

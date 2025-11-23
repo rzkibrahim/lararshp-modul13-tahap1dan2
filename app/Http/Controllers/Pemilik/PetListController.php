@@ -86,16 +86,21 @@ class PetListController extends Controller
             return redirect()->route('pemilik.pet.list')->with('error', 'Pet tidak ditemukan');
         }
 
-        // Get riwayat kunjungan pet ini
+        // Get riwayat kunjungan pet ini dengan COUNT rekam medis
         $riwayatKunjungan = DB::table('temu_dokter as td')
             ->select(
-                'td.*',
-                'u.nama as nama_dokter'
+                'td.idreservasi_dokter',
+                'td.no_urut',
+                'td.waktu_daftar',
+                'td.status',
+                'u.nama as nama_dokter',
+                DB::raw('COUNT(rm.idrekam_medis) as has_rekam_medis')
             )
             ->leftJoin('rekam_medis as rm', 'td.idreservasi_dokter', '=', 'rm.idreservasi_dokter')
             ->leftJoin('role_user as ru', 'rm.dokter_pemeriksa', '=', 'ru.idrole_user')
             ->leftJoin('user as u', 'ru.iduser', '=', 'u.iduser')
             ->where('td.idpet', $id)
+            ->groupBy('td.idreservasi_dokter', 'td.no_urut', 'td.waktu_daftar', 'td.status', 'u.nama')
             ->orderBy('td.waktu_daftar', 'desc')
             ->get();
 

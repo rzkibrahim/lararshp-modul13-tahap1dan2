@@ -302,6 +302,7 @@ Route::middleware(['auth', 'isPerawat'])->prefix('perawat')->name('perawat.')->g
 |--------------------------------------------------------------------------
 */
 
+// Pemilik Routes - DIPERBAIKI
 Route::middleware(['auth', 'isPemilik'])->prefix('pemilik')->name('pemilik.')->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardPemilikController::class, 'index'])->name('dashboard');
@@ -311,13 +312,16 @@ Route::middleware(['auth', 'isPemilik'])->prefix('pemilik')->name('pemilik.')->g
     Route::get('/pet', [PetListController::class, 'index'])->name('pet.list');
     Route::get('/pet/{id}', [PetListController::class, 'show'])->name('pet.show');
 
-    // Rekam Medis (view rekam medis) - DIPERBAIKI: gunakan RekamMedisPemController
+    // Rekam Medis (view rekam medis)
     Route::get('/rekammedis', [RekamMedisPemController::class, 'index'])->name('rekammedis.list');
     Route::get('/rekammedis/{id}', [RekamMedisPemController::class, 'show'])->name('rekammedis.show');
 
     // Reservasi (view jadwal temu dokter)
     Route::get('/reservasi', [ReservasiListController::class, 'index'])->name('reservasi.list');
     Route::post('/reservasi', [ReservasiListController::class, 'store'])->name('reservasi.store');
+
+    // ✅ TAMBAHKAN ROUTE INI - Batalkan Reservasi
+    Route::post('/reservasi/{id}/cancel', [ReservasiListController::class, 'cancel'])->name('reservasi.cancel');
 
     // Profil
     Route::get('/profil', [DashboardPemilikController::class, 'profil'])->name('profil');
